@@ -46,25 +46,33 @@ export default function App() {
   }, []);
 
   // Load notes whenever the folder is (re)set or the search/tag filter
-  // changes.
+  // changes. Clear a stale error banner on success so a prior failure
+  // doesn't linger after a subsequent successful load.
   useEffect(() => {
     if (!dir) return;
-    refresh().catch((e) => {
-      console.error(e);
-      setError(String(e));
-    });
+    refresh()
+      .then(() => setError(null))
+      .catch((e) => {
+        console.error(e);
+        setError(String(e));
+      });
   }, [dir, refresh]);
 
-  // Subscribe to backend-originated note changes once a folder is set;
-  // clean up the listener on unmount or when `dir` changes.
+  // Subscribe to backend-originated note changes once a folder is set.
+  // Keep the promise itself (not a variable assigned inside `.then`) so
+  // cleanup can always unlisten even if it runs before `listen()`
+  // resolves (e.g. StrictMode mount -> cleanup -> remount), which would
+  // otherwise leak a listener.
   useEffect(() => {
     if (!dir) return;
-    let unlisten: (() => void) | undefined;
-    notesApi.onNotesChanged(() => refreshRef.current()).then((fn) => {
-      unlisten = fn;
+    const unlistenPromise = notesApi.onNotesChanged(() => {
+      refreshRef.current().catch((e) => {
+        console.error(e);
+        setError(String(e));
+      });
     });
     return () => {
-      unlisten?.();
+      unlistenPromise.then((fn) => fn());
     };
   }, [dir]);
 
