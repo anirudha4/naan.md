@@ -10,6 +10,7 @@ export default function App() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [q, setQ] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (query: string) => {
     const list = query.trim()
@@ -34,38 +35,89 @@ export default function App() {
   }, [dir, q, refresh]);
 
   async function openNote(id: string) {
-    const note = await notesApi.get(id);
-    setSelected(id);
-    setTitle(note.title);
-    setBody(note.body);
+    setError(null);
+    try {
+      const note = await notesApi.get(id);
+      setSelected(id);
+      setTitle(note.title);
+      setBody(note.body);
+    } catch (e) {
+      console.error(e);
+      setError(String(e));
+    }
   }
 
   async function save() {
     if (!selected) return;
-    await notesApi.update(selected, { title, body });
-    await refresh(q);
+    setError(null);
+    try {
+      await notesApi.update(selected, { title, body });
+      await refresh(q);
+    } catch (e) {
+      console.error(e);
+      setError(String(e));
+    }
   }
 
   async function newNote() {
-    const meta = await notesApi.create({ title: "Untitled", body: "", tags: [] });
-    await refresh(q);
-    await openNote(meta.id);
+    setError(null);
+    try {
+      const meta = await notesApi.create({ title: "Untitled", body: "", tags: [] });
+      await refresh(q);
+      await openNote(meta.id);
+    } catch (e) {
+      console.error(e);
+      setError(String(e));
+    }
   }
 
   async function del(id: string) {
-    await notesApi.remove(id);
-    if (selected === id) {
-      setSelected(null);
-      setTitle("");
-      setBody("");
+    setError(null);
+    try {
+      await notesApi.remove(id);
+      if (selected === id) {
+        setSelected(null);
+        setTitle("");
+        setBody("");
+      }
+      await refresh(q);
+    } catch (e) {
+      console.error(e);
+      setError(String(e));
     }
-    await refresh(q);
+  }
+
+  async function useFolder(dirPath: string) {
+    setError(null);
+    try {
+      await notesApi.setNotesDir(dirPath);
+      setDir(dirPath);
+    } catch (e) {
+      console.error(e);
+      setError(String(e));
+    }
   }
 
   async function chooseFolder() {
-    const picked = (await notesApi.pickNotesDir()) ?? (await notesApi.defaultNotesDir());
-    await notesApi.setNotesDir(picked);
-    setDir(picked);
+    setError(null);
+    try {
+      const picked = await notesApi.pickNotesDir();
+      if (!picked) return; // cancelled — stay on setup
+      await useFolder(picked);
+    } catch (e) {
+      console.error(e);
+      setError(String(e));
+    }
+  }
+
+  async function useDefaultFolder() {
+    setError(null);
+    try {
+      await useFolder(await notesApi.defaultNotesDir());
+    } catch (e) {
+      console.error(e);
+      setError(String(e));
+    }
   }
 
   if (!dir) {
@@ -73,7 +125,9 @@ export default function App() {
       <main className="setup">
         <h1>naan</h1>
         <p>Choose a folder to keep your notes in.</p>
+        {error && <div className="error">{error}</div>}
         <button onClick={chooseFolder}>Choose folder</button>
+        <button onClick={useDefaultFolder}>Use ~/Documents/naan</button>
       </main>
     );
   }
@@ -85,6 +139,7 @@ export default function App() {
           <input placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
           <button onClick={newNote}>+ New</button>
         </div>
+        {error && <div className="error">{error}</div>}
         <ul className="list">
           {notes.map((n) => (
             <li key={n.id} className={n.id === selected ? "active" : ""}>

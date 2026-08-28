@@ -19,3 +19,4 @@ body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; }
 .editor .body { flex: 1; resize: none; border: 1px solid #eee; border-radius: 6px; padding: 12px; font: inherit; line-height: 1.5; }
 .hint { color: #999; }
 button { cursor: pointer; }
+.error { color: #d00; padding: 8px 12px; font-size: 13px; }

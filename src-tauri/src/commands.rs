@@ -85,10 +85,16 @@ pub fn set_notes_dir(
     std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
     crate::config::save_dir(&state.config_path, &path).map_err(|e| e.to_string())?;
     state.set_dir(path.clone());
-    if let Ok(w) = crate::watcher::watch(app.clone(), &path) {
-        if let Ok(mut g) = state.watcher.lock() {
-            *g = Some(w); // dropping the old debouncer stops the old watch
+    match crate::watcher::watch(app.clone(), &path) {
+        Ok(w) => {
+            if let Ok(mut g) = state.watcher.lock() {
+                *g = Some(w); // dropping the old debouncer stops the old watch
+            }
         }
+        Err(e) => eprintln!(
+            "failed to (re)start notes watcher for {}: {e}",
+            path.display()
+        ),
     }
     Ok(())
 }

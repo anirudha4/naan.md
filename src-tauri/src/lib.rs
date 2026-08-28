@@ -11,7 +11,7 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -49,5 +49,8 @@ pub fn run() {
             commands::set_notes_dir,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+    {
+        eprintln!("error while running naan: {e}");
+        std::process::exit(1);
+    }
 }

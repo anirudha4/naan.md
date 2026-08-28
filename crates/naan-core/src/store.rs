@@ -69,8 +69,11 @@ impl FsNoteStore {
 
     pub(crate) fn find_path(&self, id: &NoteId) -> Result<PathBuf> {
         for path in self.md_files()? {
-            if &self.read_note(&path)?.meta.id == id {
-                return Ok(path);
+            // skip unreadable/malformed files so one bad note can't break lookups
+            if let Ok(note) = self.read_note(&path) {
+                if &note.meta.id == id {
+                    return Ok(path);
+                }
             }
         }
         Err(Error::NotFound(id.as_str().to_owned()))
@@ -469,5 +472,34 @@ mod tests {
         )
         .unwrap();
         assert_eq!(store.all().unwrap().len(), 1); // bad file skipped, not an error
+    }
+
+    #[test]
+    fn lookups_work_despite_a_malformed_file() {
+        let (dir, store) = store();
+        let note = store
+            .create(NewNote {
+                title: "Good".into(),
+                body: "hi".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        std::fs::write(
+            dir.path().join("bad.md"),
+            "---\nnot: a: valid: mapping\n---\n",
+        )
+        .unwrap();
+        assert_eq!(store.get(&note.meta.id).unwrap().body, "hi");
+        store
+            .update(
+                &note.meta.id,
+                NotePatch {
+                    body: Some("bye".into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        store.delete(&note.meta.id).unwrap();
+        assert!(store.list().unwrap().iter().all(|m| m.id != note.meta.id));
     }
 }
