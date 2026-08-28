@@ -11,6 +11,7 @@ pub trait NoteStore {
     fn create(&self, draft: NewNote) -> Result<Note>;
     fn update(&self, id: &NoteId, patch: NotePatch) -> Result<Note>;
     fn delete(&self, id: &NoteId) -> Result<()>;
+    fn all(&self) -> Result<Vec<Note>>;
 }
 
 pub struct FsNoteStore {
@@ -47,7 +48,7 @@ impl FsNoteStore {
             .to_string();
         let fs_time = file_mtime(path).unwrap_or_else(Utc::now);
         let id = match &raw.id {
-            Some(v) => NoteId::from_stored(v.clone()),
+            Some(v) => NoteId::parse(v.clone()),
             None => NoteId::from_path_name(&file_name),
         };
         let title = raw
@@ -68,8 +69,11 @@ impl FsNoteStore {
 
     pub(crate) fn find_path(&self, id: &NoteId) -> Result<PathBuf> {
         for path in self.md_files()? {
-            if &self.read_note(&path)?.meta.id == id {
-                return Ok(path);
+            // skip unreadable/malformed files so one bad note can't break lookups
+            if let Ok(note) = self.read_note(&path) {
+                if &note.meta.id == id {
+                    return Ok(path);
+                }
             }
         }
         Err(Error::NotFound(id.as_str().to_owned()))
@@ -190,6 +194,17 @@ impl NoteStore for FsNoteStore {
         let path = self.find_path(id)?;
         fs::remove_file(path)?;
         Ok(())
+    }
+
+    fn all(&self) -> Result<Vec<Note>> {
+        // read each file once; skip unreadable/malformed files
+        let mut notes: Vec<Note> = self
+            .md_files()?
+            .iter()
+            .filter_map(|p| self.read_note(p).ok())
+            .collect();
+        notes.sort_by_key(|n| std::cmp::Reverse(n.meta.updated));
+        Ok(notes)
     }
 }
 
@@ -416,5 +431,81 @@ mod tests {
         store.delete(&note.meta.id).unwrap();
         assert!(store.list().unwrap().is_empty());
         assert!(matches!(store.get(&note.meta.id), Err(Error::NotFound(_))));
+    }
+
+    #[test]
+    fn all_reads_every_note_with_body_sorted_newest_first() {
+        let (_d, store) = store();
+        store
+            .create(NewNote {
+                title: "One".into(),
+                body: "a".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        store
+            .create(NewNote {
+                title: "Two".into(),
+                body: "b".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        let all = store.all().unwrap();
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].meta.title, "Two"); // newest first
+        assert_eq!(all[0].body, "b"); // bodies included
+    }
+
+    #[test]
+    fn all_skips_malformed_files() {
+        let (dir, store) = store();
+        store
+            .create(NewNote {
+                title: "Good".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        std::fs::write(
+            dir.path().join("bad.md"),
+            "---\nnot: a: valid: mapping\n---\n",
+        )
+        .unwrap();
+        assert_eq!(store.all().unwrap().len(), 1); // bad file skipped, not an error
+    }
+
+    #[test]
+    fn malformed_file_does_not_break_lookups() {
+        let (dir, store) = store();
+        let note = store
+            .create(NewNote {
+                title: "Good".into(),
+                body: "hi".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        std::fs::write(
+            dir.path().join("bad.md"),
+            "---\nnot: a: valid: mapping\n---\n",
+        )
+        .unwrap();
+        // Looking up a non-existent id forces scanning ALL files, including bad.md:
+        // with the bug this errored (Yaml); with the fix it must be NotFound.
+        assert!(matches!(
+            store.get(&NoteId::parse("does-not-exist")),
+            Err(Error::NotFound(_))
+        ));
+        // and the good note remains fully operable
+        assert_eq!(store.get(&note.meta.id).unwrap().body, "hi");
+        store
+            .update(
+                &note.meta.id,
+                NotePatch {
+                    body: Some("bye".into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        store.delete(&note.meta.id).unwrap();
     }
 }
