@@ -6,6 +6,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { markdownTheme } from "./theme";
 import { useEditorBubbles } from "./useEditorBubbles";
 import { SlashMenu } from "./SlashMenu";
+import { SelectionBubble } from "./SelectionBubble";
 
 export interface CodeMirrorEditorProps {
   /** Current document text. External changes are reconciled into the view. */
@@ -131,6 +132,10 @@ export const CodeMirrorEditor = forwardRef<EditorView | null, CodeMirrorEditorPr
             onActiveIndexChange={bubbles.setActiveIndex}
             onRun={bubbles.runCommand}
           />
+        )}
+        {/* Slash menu wins: only show the selection bubble when it is closed. */}
+        {bubbles.selection && !bubbles.slash && (
+          <SelectionBubble state={bubbles.selection} view={viewRef.current} />
         )}
       </>
     );
