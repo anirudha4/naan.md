@@ -248,4 +248,17 @@ mod tests {
         assert_eq!(list[0].id.as_str(), "path:dropped.md");
         assert_eq!(list[0].title, "Dropped In");
     }
+
+    #[test]
+    fn read_paths_do_not_rewrite_plain_files() {
+        let (dir, store) = store();
+        std::fs::write(dir.path().join("dropped.md"), "# Dropped In\n\nbody").unwrap();
+        let before = std::fs::read(dir.path().join("dropped.md")).unwrap();
+
+        let id = store.list().unwrap()[0].id.clone();
+        store.get(&id).unwrap();
+
+        let after = std::fs::read(dir.path().join("dropped.md")).unwrap();
+        assert_eq!(before, after, "reading must not rewrite a plain .md file");
+    }
 }
