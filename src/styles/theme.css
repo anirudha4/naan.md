@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Minimal tokens; the user's polish pass refines these. */
+:root { color-scheme: light dark; }
+html, body, #root { height: 100%; margin: 0; }
+body { font-family: system-ui, sans-serif; }
