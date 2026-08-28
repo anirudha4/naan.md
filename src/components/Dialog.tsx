@@ -46,7 +46,9 @@ export function Dialog({
               {title}
             </BaseDialog.Title>
             {children && (
-              <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">{children}</div>
+              <BaseDialog.Description className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                {children}
+              </BaseDialog.Description>
             )}
             <div className="mt-5 flex justify-end gap-2">
               <BaseDialog.Close render={<Button variant="ghost">{cancelLabel}</Button>} />
