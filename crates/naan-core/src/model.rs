@@ -15,10 +15,11 @@ impl NoteId {
         NoteId(format!("path:{file_name}"))
     }
 
-    /// Rebuild an id from a value persisted in frontmatter (crate-internal so
-    /// callers can't forge arbitrary ids or depend on the `path:` encoding).
-    pub(crate) fn from_stored(s: String) -> Self {
-        NoteId(s)
+    /// Rebuild an id from a string previously issued by naan (round-tripped
+    /// through the UI or an MCP client). Unknown ids resolve to NotFound on
+    /// lookup, so this is safe to expose.
+    pub fn parse(s: impl Into<String>) -> Self {
+        NoteId(s.into())
     }
 
     pub fn is_managed(&self) -> bool {
@@ -76,5 +77,12 @@ mod tests {
         let id = NoteId::from_path_name("my-note.md");
         assert_eq!(id.as_str(), "path:my-note.md");
         assert!(!id.is_managed());
+    }
+
+    #[test]
+    fn parse_rebuilds_an_id_from_string() {
+        let id = NoteId::parse("01ABCDEF");
+        assert_eq!(id.as_str(), "01ABCDEF");
+        assert!(id.is_managed());
     }
 }

@@ -6,14 +6,17 @@
 //! Creates a couple of notes, edits one, then searches and lists them, so you
 //! can open the folder and see / edit the real Markdown files on disk.
 //! ponytail: throwaway hands-on demo, not shipped in the app.
-use naan_core::{search, FsNoteStore, NaiveSearcher, NewNote, NoteStore, NotePatch, SearchQuery};
+use naan_core::{search, FsNoteStore, NaiveSearcher, NewNote, NotePatch, NoteStore, SearchQuery};
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let dir = std::env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| {
-        let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-        PathBuf::from(home).join("Documents").join("naan-demo")
-    });
+    let dir = std::env::args()
+        .nth(1)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+            PathBuf::from(home).join("Documents").join("naan-demo")
+        });
     println!("notes folder: {}\n", dir.display());
 
     let store = FsNoteStore::new(&dir);
@@ -45,12 +48,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\nsearch text 'naan':");
-    for m in search(&store, &NaiveSearcher, &SearchQuery { text: "naan".into(), tags: vec![] })? {
+    for m in search(
+        &store,
+        &NaiveSearcher,
+        &SearchQuery {
+            text: "naan".into(),
+            tags: vec![],
+        },
+    )? {
         println!("  {}", m.title);
     }
 
     println!("\nsearch tag 'home':");
-    let q = SearchQuery { text: String::new(), tags: vec!["home".into()] };
+    let q = SearchQuery {
+        text: String::new(),
+        tags: vec!["home".into()],
+    };
     for m in search(&store, &NaiveSearcher, &q)? {
         println!("  {}", m.title);
     }
