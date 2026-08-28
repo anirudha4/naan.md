@@ -142,14 +142,44 @@ impl NoteStore for FsNoteStore {
         })
     }
 
-    fn update(&self, _id: &NoteId, _patch: NotePatch) -> Result<Note> {
-        // Implemented in Task 5.
-        Err(Error::Invalid("update not yet implemented".into()))
+    fn update(&self, id: &NoteId, patch: NotePatch) -> Result<Note> {
+        let path = self.find_path(id)?;
+        let mut note = self.read_note(&path)?;
+
+        // adopt-on-edit: unmanaged files earn a real ULID now
+        if !note.meta.id.is_managed() {
+            note.meta.id = NoteId::generate();
+        }
+
+        let old_title = note.meta.title.clone();
+        if let Some(t) = patch.title {
+            note.meta.title = t;
+        }
+        if let Some(b) = patch.body {
+            note.body = b;
+        }
+        if let Some(tags) = patch.tags {
+            note.meta.tags = tags;
+        }
+        note.meta.updated = Utc::now();
+
+        let target = if note.meta.title != old_title {
+            self.unique_path(&note.meta.title, Some(&path))
+        } else {
+            path.clone()
+        };
+        self.write(&target, &note.meta, &note.body)?;
+        if target != path {
+            fs::remove_file(&path)?;
+        }
+        note.meta.path = target;
+        Ok(note)
     }
 
-    fn delete(&self, _id: &NoteId) -> Result<()> {
-        // Implemented in Task 5.
-        Err(Error::Invalid("delete not yet implemented".into()))
+    fn delete(&self, id: &NoteId) -> Result<()> {
+        let path = self.find_path(id)?;
+        fs::remove_file(path)?;
+        Ok(())
     }
 }
 
@@ -260,5 +290,90 @@ mod tests {
 
         let after = std::fs::read(dir.path().join("dropped.md")).unwrap();
         assert_eq!(before, after, "reading must not rewrite a plain .md file");
+    }
+
+    #[test]
+    fn update_patches_fields_and_bumps_updated() {
+        let (_d, store) = store();
+        let note = store
+            .create(NewNote {
+                title: "Orig".into(),
+                body: "a".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        let updated = store
+            .update(
+                &note.meta.id,
+                NotePatch {
+                    body: Some("b".into()),
+                    tags: Some(vec!["t".into()]),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(updated.body, "b");
+        assert_eq!(updated.meta.tags, vec!["t"]);
+        assert!(updated.meta.updated > note.meta.updated);
+    }
+
+    #[test]
+    fn update_title_renames_the_file() {
+        let (_d, store) = store();
+        let note = store
+            .create(NewNote {
+                title: "Old Name".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        let old_path = note.meta.path.clone();
+        let updated = store
+            .update(
+                &note.meta.id,
+                NotePatch {
+                    title: Some("New Name".into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(updated.meta.path.file_name().unwrap(), "new-name.md");
+        assert!(!old_path.exists());
+    }
+
+    #[test]
+    fn editing_a_plain_file_adopts_it() {
+        let (dir, store) = store();
+        std::fs::write(dir.path().join("dropped.md"), "# Dropped\n\nbody").unwrap();
+        let id = store.list().unwrap()[0].id.clone();
+        assert!(!id.is_managed());
+        let updated = store
+            .update(
+                &id,
+                NotePatch {
+                    body: Some("new body".into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert!(updated.meta.id.is_managed()); // got a real ULID
+                                               // re-reading yields the managed id and persisted frontmatter
+        let reread = store.get(&updated.meta.id).unwrap();
+        assert_eq!(reread.body, "new body");
+        assert!(reread.meta.id.is_managed());
+    }
+
+    #[test]
+    fn delete_removes_the_file() {
+        let (_d, store) = store();
+        let note = store
+            .create(NewNote {
+                title: "Bye".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        store.delete(&note.meta.id).unwrap();
+        assert!(store.list().unwrap().is_empty());
+        assert!(matches!(store.get(&note.meta.id), Err(Error::NotFound(_))));
     }
 }
