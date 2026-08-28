@@ -46,16 +46,18 @@ export default function App() {
   }, []);
 
   // Load notes whenever the folder is (re)set or the search/tag filter
-  // changes. Clear a stale error banner on success so a prior failure
-  // doesn't linger after a subsequent successful load.
+  // changes. Deliberately does NOT clear `error` on success: this refresh
+  // can resolve after a concurrent user action's failure has already set
+  // the banner, and wiping it would hide a real error. User-initiated
+  // handlers (chooseFolder/useFolder/handleSave/handleNewNote/
+  // handleConfirmDelete/handleOpen) already call setError(null) up front,
+  // which covers clearing stale errors when the user does something.
   useEffect(() => {
     if (!dir) return;
-    refresh()
-      .then(() => setError(null))
-      .catch((e) => {
-        console.error(e);
-        setError(String(e));
-      });
+    refresh().catch((e) => {
+      console.error(e);
+      setError(String(e));
+    });
   }, [dir, refresh]);
 
   // Subscribe to backend-originated note changes once a folder is set.
