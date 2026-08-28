@@ -34,6 +34,15 @@ Body in **markdown**.
 naan watches the folder: edit or add a `.md` file from anywhere and the app
 refreshes automatically.
 
+## Editor
+
+The note editor is CodeMirror with live Markdown styling and no toolbar:
+
+- Type `/` to open a **slash-command menu** at the cursor — insert headings,
+  lists, task lists, quotes, a code block, or a divider. Filter by typing.
+- Select text to get a **formatting bubble** — bold, italic, strikethrough,
+  inline code, or a link.
+
 ## Project layout
 
 - `crates/naan-core` — pure-Rust note engine (storage + search), no UI. Fully unit-tested.
@@ -80,6 +89,7 @@ Tools exposed:
 ```bash
 cargo test --workspace                       # Rust tests
 cargo clippy --workspace -- -D warnings      # lints
+npm test                                     # frontend unit tests (vitest)
 npm run build                                # type-check + build frontend
 cargo run -p naan-core --example demo        # create sample notes in ~/Documents/naan-demo
 ```
