@@ -395,7 +395,11 @@ pub struct RawFrontmatter {
 pub fn parse(content: &str) -> Result<(Option<RawFrontmatter>, String)> {
     if let Some(rest) = content.strip_prefix("---\n") {
         let (yaml, body) = if let Some(idx) = rest.find("\n---\n") {
-            (&rest[..idx], rest[idx + 5..].to_string())
+            // Body starts after the closing fence; drop the single blank
+            // separator line that `serialize` writes between fence and body.
+            let after = &rest[idx + 5..];
+            let body = after.strip_prefix('\n').unwrap_or(after);
+            (&rest[..idx], body.to_string())
         } else if let Some(stripped) = rest.strip_suffix("\n---") {
             (stripped, String::new())
         } else {
