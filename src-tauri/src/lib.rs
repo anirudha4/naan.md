@@ -1,20 +1,39 @@
+mod commands;
 mod config;
-#[allow(dead_code)] // transient: removed in Task 5 when commands wire the chain
 mod dto;
-#[allow(dead_code)] // transient: removed in Task 5 when commands wire the chain
 mod service;
+mod state;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+use state::AppState;
+use std::path::PathBuf;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .setup(|app| {
+            // config lives in the OS app-config dir
+            let config_dir: PathBuf = app.path().app_config_dir()?;
+            let config_path = config_dir.join("config.json");
+            let saved = config::load_dir(&config_path);
+
+            app.manage(AppState {
+                notes_dir: std::sync::Mutex::new(saved),
+                config_path,
+            });
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::get_notes_dir,
+            commands::default_notes_dir,
+            commands::list_notes,
+            commands::get_note,
+            commands::create_note,
+            commands::update_note,
+            commands::delete_note,
+            commands::search_notes,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

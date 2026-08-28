@@ -1,22 +1,20 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-// `load_dir`/`save_dir` aren't called outside tests yet — startup loading
-// (Task 5) and the save command (Task 6) land in later tasks. Until then
-// rustc's dead-code check can't see a live caller, hence the allows.
-#[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
 struct ConfigFile {
     notes_dir: String,
 }
 
-#[allow(dead_code)]
 pub fn load_dir(config_path: &Path) -> Option<PathBuf> {
     let text = std::fs::read_to_string(config_path).ok()?;
     let cfg: ConfigFile = serde_json::from_str(&text).ok()?;
     Some(PathBuf::from(cfg.notes_dir))
 }
 
+// `save_dir` isn't called outside tests yet — the save command lands in
+// Task 6. Until then rustc's dead-code check can't see a live caller, hence
+// the allow.
 #[allow(dead_code)]
 pub fn save_dir(config_path: &Path, dir: &Path) -> std::io::Result<()> {
     if let Some(parent) = config_path.parent() {
