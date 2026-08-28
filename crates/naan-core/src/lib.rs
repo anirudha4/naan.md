@@ -3,8 +3,10 @@
 mod error;
 mod frontmatter;
 mod model;
+mod search;
 mod store;
 
 pub use error::{Error, Result};
 pub use model::{NewNote, Note, NoteId, NoteMeta, NotePatch};
+pub use search::{NaiveSearcher, SearchQuery, Searcher};
 pub use store::{FsNoteStore, NoteStore};
