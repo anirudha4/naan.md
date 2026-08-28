@@ -224,6 +224,14 @@ export default function App() {
           </div>
         )}
         <EditorPane
+          // Remount the editor per note so each note gets a fresh document and
+          // a fresh undo history. Without this, one reused EditorView keeps a
+          // shared history and the reconcile dispatch that swaps note bodies is
+          // undoable — Cmd+Z after switching notes would revert to the previous
+          // note's text, fire onChange, and let Save write the wrong content.
+          // `selectedId` is stable while editing one note, so typing never
+          // remounts; it only changes when you switch notes.
+          key={selectedId ?? "none"}
           title={title}
           body={body}
           onTitleChange={setTitle}

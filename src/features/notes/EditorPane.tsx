@@ -1,5 +1,6 @@
 import { Button } from "../../components/Button";
 import { Input } from "../../components/Input";
+import { CodeMirrorEditor } from "../editor/CodeMirrorEditor";
 import { cn } from "../../lib/cn";
 
 export interface EditorPaneProps {
@@ -14,9 +15,8 @@ export interface EditorPaneProps {
 }
 
 /**
- * Title input + plain-textarea body + Save button. The `<textarea>` is a
- * deliberate stand-in this phase — the CodeMirror slash/selection-bubble
- * editor replaces it in Phase 5.
+ * Title input + CodeMirror live-markdown body + Save button. The slash and
+ * selection bubbles get layered onto the editor later in Phase 5.
  */
 export function EditorPane({
   title,
@@ -44,15 +44,15 @@ export function EditorPane({
         aria-label="Note title"
         className="text-base font-medium"
       />
-      <textarea
+      <CodeMirrorEditor
         value={body}
-        onChange={(e) => onBodyChange(e.target.value)}
+        onChange={onBodyChange}
         placeholder="Start writing…"
-        aria-label="Note body"
+        ariaLabel="Note body"
         className={cn(
-          "flex-1 resize-none rounded-md border border-gray-300 bg-white p-3 text-sm text-gray-900 outline-none",
-          "placeholder:text-gray-400 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30",
-          "dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500",
+          "flex-1 overflow-hidden rounded-md border border-gray-300 bg-white text-gray-900",
+          "focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/30",
+          "dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100",
         )}
       />
       <div className="flex justify-end">
