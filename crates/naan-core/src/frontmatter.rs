@@ -26,21 +26,33 @@ pub struct RawFrontmatter {
 /// Split file content into (optional frontmatter, body). Frontmatter must be
 /// a leading fenced block: `---\n ... \n---\n`.
 pub fn parse(content: &str) -> Result<(Option<RawFrontmatter>, String)> {
-    if let Some(rest) = content.strip_prefix("---\n") {
-        let (yaml, body) = if let Some(idx) = rest.find("\n---\n") {
-            // Body starts after the closing fence; drop the single blank
-            // separator line that `serialize` writes between fence and body.
-            let after = &rest[idx + 5..];
-            let body = after.strip_prefix('\n').unwrap_or(after);
-            (&rest[..idx], body.to_string())
-        } else if let Some(stripped) = rest.strip_suffix("\n---") {
-            (stripped, String::new())
-        } else {
-            // Opening fence with no closing fence: treat as plain body.
-            return Ok((None, content.to_string()));
-        };
-        let raw: RawFrontmatter = serde_yaml_ng::from_str(yaml)?;
-        return Ok((Some(raw), body));
+    // Detect the opening/closing `---` fence line-endings-agnostically so notes
+    // saved with CRLF keep their frontmatter (and thus their ULID identity).
+    let mut lines = content.split_inclusive('\n');
+    let first = lines.next().unwrap_or("");
+    if first.trim_end_matches(['\r', '\n']) == "---" {
+        let mut yaml = String::new();
+        let mut consumed = first.len();
+        let mut closed = false;
+        for line in lines {
+            consumed += line.len();
+            if line.trim_end_matches(['\r', '\n']) == "---" {
+                closed = true;
+                break;
+            }
+            yaml.push_str(line);
+        }
+        if closed {
+            let raw: RawFrontmatter = serde_yaml_ng::from_str(&yaml)?;
+            // Drop the single blank separator line that `serialize` writes
+            // between the closing fence and the body.
+            let body = &content[consumed..];
+            let body = body
+                .strip_prefix("\r\n")
+                .or_else(|| body.strip_prefix('\n'))
+                .unwrap_or(body);
+            return Ok((Some(raw), body.to_string()));
+        }
     }
     Ok((None, content.to_string()))
 }
@@ -72,6 +84,15 @@ mod tests {
         let (raw, body) = parse(content).unwrap();
         assert!(raw.is_none());
         assert_eq!(body, content);
+    }
+
+    #[test]
+    fn parses_crlf_frontmatter_preserving_identity() {
+        let content = "---\r\nid: 01ABC\r\ntitle: Hi\r\ntags: []\r\ncreated: 2026-08-28T10:00:00Z\r\nupdated: 2026-08-28T10:00:00Z\r\n---\r\n\r\nbody";
+        let (raw, body) = parse(content).unwrap();
+        let raw = raw.unwrap();
+        assert_eq!(raw.id.as_deref(), Some("01ABC"));
+        assert_eq!(body, "body");
     }
 
     #[test]

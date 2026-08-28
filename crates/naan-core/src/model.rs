@@ -4,7 +4,7 @@ use std::path::PathBuf;
 /// Stable identity for a note. Managed notes hold a ULID; files without
 /// frontmatter get an in-memory `path:<filename>` id until adopted.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NoteId(pub String);
+pub struct NoteId(String);
 
 impl NoteId {
     pub fn generate() -> Self {
@@ -13,6 +13,12 @@ impl NoteId {
 
     pub fn from_path_name(file_name: &str) -> Self {
         NoteId(format!("path:{file_name}"))
+    }
+
+    /// Rebuild an id from a value persisted in frontmatter (crate-internal so
+    /// callers can't forge arbitrary ids or depend on the `path:` encoding).
+    pub(crate) fn from_stored(s: String) -> Self {
+        NoteId(s)
     }
 
     pub fn is_managed(&self) -> bool {

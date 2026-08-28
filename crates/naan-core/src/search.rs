@@ -80,6 +80,57 @@ mod tests {
     }
 
     #[test]
+    fn text_matches_title_only() {
+        // "special" appears only in the title, not the body or tags.
+        let notes = vec![
+            note("Special Report", "quarterly numbers", &["finance"]),
+            note("Other", "nothing here", &["misc"]),
+        ];
+        let hits = NaiveSearcher.search(
+            &notes,
+            &SearchQuery {
+                text: "special".into(),
+                tags: vec![],
+            },
+        );
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Special Report");
+    }
+
+    #[test]
+    fn text_matches_tag_substring() {
+        // "urg" is a substring of the tag "urgent" only; not in title/body.
+        let notes = vec![
+            note("Task", "do the thing", &["urgent"]),
+            note("Other", "nothing here", &["later"]),
+        ];
+        let hits = NaiveSearcher.search(
+            &notes,
+            &SearchQuery {
+                text: "urg".into(),
+                tags: vec![],
+            },
+        );
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Task");
+    }
+
+    #[test]
+    fn tag_filter_is_case_insensitive() {
+        // Stored tag "Work", queried as "work" -> still matches.
+        let notes = vec![note("A", "", &["Work"]), note("B", "", &["home"])];
+        let hits = NaiveSearcher.search(
+            &notes,
+            &SearchQuery {
+                text: String::new(),
+                tags: vec!["work".into()],
+            },
+        );
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "A");
+    }
+
+    #[test]
     fn empty_text_returns_all() {
         let notes = vec![note("A", "", &[]), note("B", "", &[])];
         let hits = NaiveSearcher.search(&notes, &SearchQuery::default());

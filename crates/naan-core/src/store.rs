@@ -29,7 +29,7 @@ impl FsNoteStore {
         }
         for entry in fs::read_dir(&self.dir)? {
             let path = entry?.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("md") {
+            if path.extension().and_then(|e| e.to_str()) == Some("md") && path.is_file() {
                 out.push(path);
             }
         }
@@ -47,7 +47,7 @@ impl FsNoteStore {
             .to_string();
         let fs_time = file_mtime(path).unwrap_or_else(Utc::now);
         let id = match &raw.id {
-            Some(v) => NoteId(v.clone()),
+            Some(v) => NoteId::from_stored(v.clone()),
             None => NoteId::from_path_name(&file_name),
         };
         let title = raw
@@ -72,7 +72,7 @@ impl FsNoteStore {
                 return Ok(path);
             }
         }
-        Err(Error::NotFound(id.0.clone()))
+        Err(Error::NotFound(id.as_str().to_owned()))
     }
 
     /// A free `slug.md` under `dir`, skipping `exclude` (the note's own path
@@ -95,7 +95,7 @@ impl FsNoteStore {
 
     pub(crate) fn write(&self, path: &Path, meta: &NoteMeta, body: &str) -> Result<()> {
         let fm = Frontmatter {
-            id: meta.id.0.clone(),
+            id: meta.id.as_str().to_owned(),
             title: meta.title.clone(),
             tags: meta.tags.clone(),
             created: meta.created,
@@ -103,18 +103,24 @@ impl FsNoteStore {
         };
         let content = frontmatter::serialize(&fm, body)?;
         fs::create_dir_all(&self.dir)?;
-        fs::write(path, content)?;
+        // Atomic write: fill a `.tmp` sibling then rename over `path`, so a crash
+        // mid-write can't truncate an existing note. `.tmp` isn't matched by
+        // `md_files`, so it never shows up as a note.
+        let tmp = path.with_extension("tmp");
+        fs::write(&tmp, content)?;
+        fs::rename(&tmp, path)?;
         Ok(())
     }
 }
 
 impl NoteStore for FsNoteStore {
     fn list(&self) -> Result<Vec<NoteMeta>> {
+        // ponytail: skip unreadable/malformed files so one bad note can't brick the list
         let mut metas = self
             .md_files()?
             .iter()
-            .map(|p| self.read_note(p).map(|n| n.meta))
-            .collect::<Result<Vec<_>>>()?;
+            .filter_map(|p| self.read_note(p).ok().map(|n| n.meta))
+            .collect::<Vec<_>>();
         metas.sort_by_key(|m| std::cmp::Reverse(m.updated));
         Ok(metas)
     }
@@ -168,8 +174,12 @@ impl NoteStore for FsNoteStore {
         } else {
             path.clone()
         };
+        // `write` ignores `meta.path`; the note's path is set below after we know
+        // whether a rename happened.
         self.write(&target, &note.meta, &note.body)?;
         if target != path {
+            // Write-then-delete rename: if the delete fails, two files briefly
+            // share one id. We favor no-data-loss over strict uniqueness here.
             fs::remove_file(&path)?;
         }
         note.meta.path = target;
@@ -266,6 +276,37 @@ mod tests {
         let list = store.list().unwrap();
         assert_eq!(list.len(), 2);
         assert_eq!(list[0].id, two.meta.id); // newest first
+    }
+
+    #[test]
+    fn list_skips_unreadable_or_malformed_files() {
+        let (dir, store) = store();
+        store
+            .create(NewNote {
+                title: "Good One".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        store
+            .create(NewNote {
+                title: "Good Two".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        // A junk file with frontmatter that fails YAML parsing.
+        std::fs::write(
+            dir.path().join("bad.md"),
+            "---\nnot: a: valid: mapping\n---\n",
+        )
+        .unwrap();
+        // A directory named like a note must be ignored (not treated as a file).
+        std::fs::create_dir(dir.path().join("notafile.md")).unwrap();
+
+        let list = store.list().unwrap();
+        assert_eq!(list.len(), 2);
+        let titles: Vec<_> = list.iter().map(|m| m.title.as_str()).collect();
+        assert!(titles.contains(&"Good One"));
+        assert!(titles.contains(&"Good Two"));
     }
 
     #[test]
