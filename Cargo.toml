@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["src-tauri", "crates/naan-core"]
+members = ["src-tauri", "crates/naan-core", "crates/naan-mcp"]
