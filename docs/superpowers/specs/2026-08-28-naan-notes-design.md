@@ -117,7 +117,8 @@ pub trait NoteStore {
 }
 
 pub trait Searcher {
-    fn search(&self, notes: &[NoteMeta], query: &SearchQuery) -> Vec<NoteMeta>;
+    // full-text needs bodies, so it searches over Note (not NoteMeta)
+    fn search(&self, notes: &[Note], query: &SearchQuery) -> Vec<NoteMeta>;
 }
 ```
 
