@@ -82,6 +82,48 @@ fn create_then_list_over_stdio() {
         r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
     );
 
+    // 2b) tools/list must advertise exactly the six note tools.
+    send(
+        &mut stdin,
+        r#"{"jsonrpc":"2.0","id":10,"method":"tools/list","params":{}}"#,
+    );
+    let list_tools_line = recv_response(&mut stdout, 10);
+    let list_tools_json: serde_json::Value =
+        serde_json::from_str(&list_tools_line).unwrap_or_else(|e| {
+            panic!("tools/list response was not valid JSON: {e}: {list_tools_line}")
+        });
+    let tools = list_tools_json["result"]["tools"]
+        .as_array()
+        .unwrap_or_else(|| {
+            panic!("tools/list response had no result.tools array: {list_tools_line}")
+        });
+    let tool_names: Vec<&str> = tools
+        .iter()
+        .map(|t| {
+            t["name"]
+                .as_str()
+                .unwrap_or_else(|| panic!("tool entry missing name: {t}"))
+        })
+        .collect();
+    for expected in [
+        "list_notes",
+        "read_note",
+        "search_notes",
+        "create_note",
+        "update_note",
+        "delete_note",
+    ] {
+        assert!(
+            tool_names.contains(&expected),
+            "tools/list should advertise {expected}, got {tool_names:?}"
+        );
+    }
+    assert_eq!(
+        tool_names.len(),
+        6,
+        "tools/list should advertise exactly 6 tools, got {tool_names:?}"
+    );
+
     // 3) tools/call create_note
     send(
         &mut stdin,

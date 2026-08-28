@@ -14,8 +14,12 @@ fn notes_dir() -> PathBuf {
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         if a == "--notes-dir" {
-            if let Some(p) = args.next() {
-                return PathBuf::from(p);
+            match args.next() {
+                Some(p) => return PathBuf::from(p),
+                None => {
+                    eprintln!("naan-mcp: --notes-dir requires a path argument");
+                    std::process::exit(2);
+                }
             }
         }
     }
