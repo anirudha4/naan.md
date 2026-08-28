@@ -29,4 +29,5 @@ notify-debouncer-full = "0.5"
 
 [dev-dependencies]
 chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3"
 
