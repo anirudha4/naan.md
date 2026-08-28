@@ -475,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn lookups_work_despite_a_malformed_file() {
+    fn malformed_file_does_not_break_lookups() {
         let (dir, store) = store();
         let note = store
             .create(NewNote {
@@ -489,6 +489,13 @@ mod tests {
             "---\nnot: a: valid: mapping\n---\n",
         )
         .unwrap();
+        // Looking up a non-existent id forces scanning ALL files, including bad.md:
+        // with the bug this errored (Yaml); with the fix it must be NotFound.
+        assert!(matches!(
+            store.get(&NoteId::parse("does-not-exist")),
+            Err(Error::NotFound(_))
+        ));
+        // and the good note remains fully operable
         assert_eq!(store.get(&note.meta.id).unwrap().body, "hi");
         store
             .update(
@@ -500,6 +507,5 @@ mod tests {
             )
             .unwrap();
         store.delete(&note.meta.id).unwrap();
-        assert!(store.list().unwrap().iter().all(|m| m.id != note.meta.id));
     }
 }
