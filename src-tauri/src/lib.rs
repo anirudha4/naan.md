@@ -1,5 +1,8 @@
 mod config;
+#[allow(dead_code)] // transient: removed in Task 5 when commands wire the chain
 mod dto;
+#[allow(dead_code)] // transient: removed in Task 5 when commands wire the chain
+mod service;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]

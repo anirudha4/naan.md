@@ -1,10 +1,6 @@
 use naan_core::{NewNote, Note, NoteMeta, NotePatch, SearchQuery};
 use serde::{Deserialize, Serialize};
 
-// These DTOs are constructed only through their `From` impls, which are not
-// yet called by any Tauri command (that wiring lands in a later task). Until
-// then rustc's dead-code check can't see a live caller, hence the allows.
-#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct NoteMetaDto {
     pub id: String,
@@ -14,7 +10,6 @@ pub struct NoteMetaDto {
     pub updated: String,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct NoteDto {
     pub id: String,
