@@ -4,6 +4,8 @@ import { EditorView, keymap, placeholder as cmPlaceholder } from "@codemirror/vi
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { markdownTheme } from "./theme";
+import { useEditorBubbles } from "./useEditorBubbles";
+import { SlashMenu } from "./SlashMenu";
 
 export interface CodeMirrorEditorProps {
   /** Current document text. External changes are reconciled into the view. */
@@ -51,6 +53,10 @@ export const CodeMirrorEditor = forwardRef<EditorView | null, CodeMirrorEditorPr
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
 
+    // Slash-command bubble: CM extensions (detector + menu-only keymap) plus the
+    // React state that drives <SlashMenu>. Anchored to this view via viewRef.
+    const bubbles = useEditorBubbles(viewRef);
+
     // Keep the latest onChange without re-creating the view every render.
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -58,6 +64,7 @@ export const CodeMirrorEditor = forwardRef<EditorView | null, CodeMirrorEditorPr
     // Mount-time-only inputs: the view is created once, so capture these on
     // first render and read them from refs inside the create-once effect.
     const extensionsRef = useRef(extensions);
+    const bubbleExtensionsRef = useRef(bubbles.extensions);
     const placeholderRef = useRef(placeholder);
     const ariaLabelRef = useRef(ariaLabel);
 
@@ -81,6 +88,8 @@ export const CodeMirrorEditor = forwardRef<EditorView | null, CodeMirrorEditorPr
           markdown(),
           markdownTheme,
           updateListener,
+          // Slash-menu detector + Prec.highest keymap (see useEditorBubbles).
+          ...bubbleExtensionsRef.current,
           ...(placeholderRef.current ? [cmPlaceholder(placeholderRef.current)] : []),
           ...(ariaLabelRef.current
             ? [EditorView.contentAttributes.of({ "aria-label": ariaLabelRef.current })]
@@ -112,7 +121,19 @@ export const CodeMirrorEditor = forwardRef<EditorView | null, CodeMirrorEditorPr
       view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
     }, [value]);
 
-    return <div ref={containerRef} className={className} />;
+    return (
+      <>
+        <div ref={containerRef} className={className} />
+        {bubbles.slash && (
+          <SlashMenu
+            state={bubbles.slash}
+            activeIndex={bubbles.activeIndex}
+            onActiveIndexChange={bubbles.setActiveIndex}
+            onRun={bubbles.runCommand}
+          />
+        )}
+      </>
+    );
   },
 );
 
