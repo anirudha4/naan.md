@@ -3,6 +3,7 @@ mod config;
 mod dto;
 mod service;
 mod state;
+mod watcher;
 
 use state::AppState;
 use std::path::PathBuf;
@@ -22,7 +23,17 @@ pub fn run() {
             app.manage(AppState {
                 notes_dir: std::sync::Mutex::new(saved),
                 config_path,
+                watcher: std::sync::Mutex::new(None),
             });
+
+            if let Some(dir) = app.state::<AppState>().current_dir() {
+                if let Ok(w) = watcher::watch(app.handle().clone(), &dir) {
+                    if let Ok(mut g) = app.state::<AppState>().watcher.lock() {
+                        *g = Some(w);
+                    }
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

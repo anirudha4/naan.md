@@ -4,6 +4,7 @@ use std::sync::Mutex;
 pub struct AppState {
     pub notes_dir: Mutex<Option<PathBuf>>,
     pub config_path: PathBuf,
+    pub watcher: Mutex<Option<crate::watcher::NotesWatcher>>,
 }
 
 impl AppState {

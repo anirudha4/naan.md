@@ -84,8 +84,11 @@ pub fn set_notes_dir(
     let path = std::path::PathBuf::from(&dir);
     std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
     crate::config::save_dir(&state.config_path, &path).map_err(|e| e.to_string())?;
-    state.set_dir(path);
-    // Task 7 will also re-point the file watcher here.
-    let _ = app; // used by Task 7
+    state.set_dir(path.clone());
+    if let Ok(w) = crate::watcher::watch(app.clone(), &path) {
+        if let Ok(mut g) = state.watcher.lock() {
+            *g = Some(w); // dropping the old debouncer stops the old watch
+        }
+    }
     Ok(())
 }
