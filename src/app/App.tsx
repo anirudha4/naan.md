@@ -50,8 +50,9 @@ export default function App() {
   // can resolve after a concurrent user action's failure has already set
   // the banner, and wiping it would hide a real error. User-initiated
   // handlers (chooseFolder/useFolder/handleSave/handleNewNote/
-  // handleConfirmDelete/handleOpen) already call setError(null) up front,
-  // which covers clearing stale errors when the user does something.
+  // handleConfirmDelete/handleOpen/handleToggleTag/handleQueryChange)
+  // already call setError(null) up front, which covers clearing stale
+  // errors when the user does something.
   useEffect(() => {
     if (!dir) return;
     refresh().catch((e) => {
@@ -138,7 +139,13 @@ export default function App() {
   }
 
   function handleToggleTag(tag: string) {
+    setError(null);
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  }
+
+  function handleQueryChange(q: string) {
+    setError(null);
+    setQuery(q);
   }
 
   async function useFolder(dirPath: string) {
@@ -203,7 +210,7 @@ export default function App() {
         notes={notes}
         selectedId={selectedId}
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={handleQueryChange}
         activeTags={activeTags}
         onToggleTag={handleToggleTag}
         onOpen={handleOpen}

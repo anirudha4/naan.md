@@ -1,3 +1,6 @@
+// Intentionally-staged primitive: an accessible menu foundation with no
+// consumer yet. Kept for future note-actions/menus (e.g. per-note context
+// menu) — not accidental dead code.
 import * as React from "react";
 import { Menu } from "@base-ui/react/menu";
 import { cn } from "../lib/cn";

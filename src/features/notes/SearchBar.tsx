@@ -9,7 +9,9 @@ export interface SearchBarProps {
 
 /**
  * Search input for filtering the note list. Presentational — the shell owns
- * the debounced/immediate search logic and passes `query` down.
+ * the search logic and passes `query` down. Search runs immediately on every
+ * keystroke (no debounce); the backend call is local Tauri IPC, fast enough
+ * that debouncing isn't needed.
  */
 export function SearchBar({ query, onQueryChange, className }: SearchBarProps) {
   return (
