@@ -1,0 +1,18 @@
+[package]
+name = "naan-mcp"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "naan-mcp"
+path = "src/main.rs"
+
+[dependencies]
+naan-core = { path = "../naan-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+# rmcp + tokio are added in Task 2 (verify versions via context7 there)
+
+[dev-dependencies]
+tempfile = "3"
