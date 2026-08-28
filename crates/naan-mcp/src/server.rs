@@ -142,9 +142,18 @@ impl NaanServer {
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for NaanServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "naan notes server: list, read, search, create, update and delete notes.",
-        )
+        // `Implementation` is `#[non_exhaustive]`, so it can't be built with a
+        // struct literal from this crate; mutate the fields of the instance
+        // `ServerInfo::new` already gives us. Its default (`from_build_env()`)
+        // reports rmcp's own crate name/version rather than ours, so override
+        // both explicitly here.
+        let mut info = ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+            .with_instructions(
+                "naan notes server: list, read, search, create, update and delete notes.",
+            );
+        info.server_info.name = "naan-mcp".to_string();
+        info.server_info.version = env!("CARGO_PKG_VERSION").to_string();
+        info
     }
 }
 

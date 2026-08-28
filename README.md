@@ -5,7 +5,7 @@ choose — so they stay yours, readable by any editor, and easy to sync (point t
 folder at iCloud/Dropbox/git yourself). Built with Tauri v2 + React.
 
 A standalone MCP server (so Claude Code and other agents can read/write your
-notes) is a later phase.
+notes) ships in `crates/naan-mcp` — see [Agents (MCP)](#agents-mcp) below.
 
 ## Run it
 
@@ -37,8 +37,43 @@ refreshes automatically.
 ## Project layout
 
 - `crates/naan-core` — pure-Rust note engine (storage + search), no UI. Fully unit-tested.
+- `crates/naan-mcp` — stdio MCP server exposing notes to agents (depends on `naan-core`).
 - `src-tauri` — the Tauri app: commands, config, file watcher (depends on `naan-core`).
 - `src` — React frontend (talks to Rust only through `src/lib/notesApi.ts`).
+
+## Agents (MCP)
+
+`naan-mcp` is a stdio [MCP](https://modelcontextprotocol.io) server that lets
+agents like Claude Code read and write your notes as the same `.md` files the
+app uses.
+
+Build it:
+
+```bash
+cargo build -p naan-mcp --release
+```
+
+Then register it with Claude Code (e.g. in `.mcp.json` or via `claude mcp add`):
+
+```json
+{
+  "mcpServers": {
+    "naan": {
+      "command": "/absolute/path/to/naan/target/release/naan-mcp",
+      "args": ["--notes-dir", "/Users/you/Documents/naan"]
+    }
+  }
+}
+```
+
+Tools exposed:
+
+- `list_notes` — list all notes (id, title, tags, timestamps).
+- `read_note` — read one note in full, including its body, by id.
+- `search_notes` — search notes by free text and optional tags.
+- `create_note` — create a note from a title and optional body/tags.
+- `update_note` — update a note's title, body and/or tags by id.
+- `delete_note` — delete a note by id.
 
 ## Dev commands
 
