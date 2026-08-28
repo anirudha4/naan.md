@@ -1,6 +1,11 @@
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
-import { insertBlockSpec, toggleLinePrefixSpec, wrapSelectionSpec } from "./transforms";
+import {
+  insertBlockSpec,
+  insertDividerSpec,
+  toggleLinePrefixSpec,
+  wrapSelectionSpec,
+} from "./transforms";
 
 /**
  * Headless tests: build an `EditorState` (no DOM, no `EditorView`), apply a
@@ -71,13 +76,13 @@ describe("toggleLinePrefixSpec", () => {
 });
 
 describe("insertBlockSpec", () => {
-  it("inserts a divider on its own line after existing content", () => {
+  it("inserts a block on its own line after existing content", () => {
     const state = EditorState.create({
       doc: "hello",
       selection: EditorSelection.cursor(5),
     });
-    const tr = state.update(insertBlockSpec(state, "---"));
-    expect(tr.state.doc.toString()).toBe("hello\n---");
+    const tr = state.update(insertBlockSpec(state, "```"));
+    expect(tr.state.doc.toString()).toBe("hello\n```");
   });
 
   it("inserts directly into an empty document without extra newlines", () => {
@@ -85,8 +90,8 @@ describe("insertBlockSpec", () => {
       doc: "",
       selection: EditorSelection.cursor(0),
     });
-    const tr = state.update(insertBlockSpec(state, "---"));
-    expect(tr.state.doc.toString()).toBe("---");
+    const tr = state.update(insertBlockSpec(state, "```"));
+    expect(tr.state.doc.toString()).toBe("```");
   });
 
   it("splits a line when the cursor sits inside existing content", () => {
@@ -94,7 +99,47 @@ describe("insertBlockSpec", () => {
       doc: "hello world",
       selection: EditorSelection.cursor(5),
     });
-    const tr = state.update(insertBlockSpec(state, "---"));
-    expect(tr.state.doc.toString()).toBe("hello\n---\n world");
+    const tr = state.update(insertBlockSpec(state, "```"));
+    expect(tr.state.doc.toString()).toBe("hello\n```\n world");
+  });
+});
+
+describe("insertDividerSpec", () => {
+  it("puts a blank line before the divider so it is a thematic break, not a setext heading", () => {
+    const state = EditorState.create({
+      doc: "hello",
+      selection: EditorSelection.cursor(5),
+    });
+    const tr = state.update(insertDividerSpec(state));
+    // A bare `hello\n---` would be a setext H2 underline; the blank line makes
+    // `---` a real horizontal rule.
+    expect(tr.state.doc.toString()).toBe("hello\n\n---");
+  });
+
+  it("inserts directly into an empty document without extra newlines", () => {
+    const state = EditorState.create({
+      doc: "",
+      selection: EditorSelection.cursor(0),
+    });
+    const tr = state.update(insertDividerSpec(state));
+    expect(tr.state.doc.toString()).toBe("---");
+  });
+
+  it("adds the blank separator from an empty line directly below content", () => {
+    const state = EditorState.create({
+      doc: "hello\n",
+      selection: EditorSelection.cursor(6),
+    });
+    const tr = state.update(insertDividerSpec(state));
+    expect(tr.state.doc.toString()).toBe("hello\n\n---");
+  });
+
+  it("does not add a separator when a blank line already precedes the cursor", () => {
+    const state = EditorState.create({
+      doc: "hello\n\n",
+      selection: EditorSelection.cursor(7),
+    });
+    const tr = state.update(insertDividerSpec(state));
+    expect(tr.state.doc.toString()).toBe("hello\n\n---");
   });
 });

@@ -1,5 +1,5 @@
 import type { EditorView } from "@codemirror/view";
-import { insertBlock, toggleLinePrefix, wrapSelection } from "./transforms";
+import { insertBlock, insertDivider, toggleLinePrefix, wrapSelection } from "./transforms";
 
 /**
  * Data-driven command registry consumed by the slash menu (Task 3) and the
@@ -80,7 +80,9 @@ export const slashCommands: SlashCommand[] = [
     id: "divider",
     title: "Divider",
     group: "Block",
-    run: (view) => insertBlock(view, "---"),
+    // insertDivider (not insertBlock) so `---` is a valid thematic break with a
+    // blank line above it, never a setext heading underline.
+    run: (view) => insertDivider(view),
   },
 ];
 

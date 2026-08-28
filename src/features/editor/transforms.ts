@@ -104,3 +104,44 @@ export function insertBlockSpec(state: EditorState, text: string): TransactionSp
 export function insertBlock(view: EditorView, text: string): void {
   view.dispatch(insertBlockSpec(view.state, text));
 }
+
+/**
+ * Insert a Markdown thematic break (`---`) as its own block.
+ *
+ * A thematic break needs a BLANK line above it: `hello\n---` is parsed by
+ * CommonMark as a setext H2 *underline*, turning "hello" into a heading rather
+ * than drawing a divider. This guarantees the separator — it inserts enough
+ * leading newlines so the `---` line is preceded by a blank line (or the start
+ * of the document), which the generic `insertBlockSpec` does not do (and only
+ * the divider needs; fenced code blocks are fine without it). A trailing
+ * newline keeps any text after the cursor on its own line.
+ */
+export function insertDividerSpec(state: EditorState): TransactionSpec {
+  const pos = state.selection.main.from;
+  const line = state.doc.lineAt(pos);
+  let before: string;
+  if (pos > line.from) {
+    // Content sits before the cursor on this line: push `---` down two lines so
+    // a blank line separates it from that content.
+    before = "\n\n";
+  } else if (line.number === 1) {
+    // Start of the document: no separator needed.
+    before = "";
+  } else {
+    // Cursor at the start of a line: add a blank line only when the line
+    // immediately above is non-blank (an already-blank line is enough).
+    const prev = state.doc.line(line.number - 1);
+    before = prev.text.trim() === "" ? "" : "\n";
+  }
+  const after = pos < line.to ? "\n" : "";
+  const insert = before + "---" + after;
+  return {
+    changes: { from: pos, insert },
+    selection: EditorSelection.cursor(pos + insert.length),
+  };
+}
+
+/** Dispatch `insertDividerSpec` against a live view. */
+export function insertDivider(view: EditorView): void {
+  view.dispatch(insertDividerSpec(view.state));
+}

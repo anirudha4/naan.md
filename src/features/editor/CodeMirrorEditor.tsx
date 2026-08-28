@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useRef, type ForwardedRef } from "react";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, placeholder as cmPlaceholder } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { markdown } from "@codemirror/lang-markdown";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { markdownTheme } from "./theme";
 import { useEditorBubbles } from "./useEditorBubbles";
 import { SlashMenu } from "./SlashMenu";
@@ -86,7 +86,11 @@ export const CodeMirrorEditor = forwardRef<EditorView | null, CodeMirrorEditorPr
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
-          markdown(),
+          // `base: markdownLanguage` swaps bare CommonMark for the GFM-enabled
+          // parser (Table, TaskList, Strikethrough, Autolink), so `~~strike~~`
+          // and `- [ ] task` actually parse and carry their highlight tags —
+          // e.g. Strikethrough -> t.strikethrough, which theme.ts styles.
+          markdown({ base: markdownLanguage }),
           markdownTheme,
           updateListener,
           // Slash-menu detector + Prec.highest keymap (see useEditorBubbles).

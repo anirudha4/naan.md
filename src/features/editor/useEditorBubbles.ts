@@ -49,8 +49,11 @@ export interface EditorBubbles {
  * `SelectionBubble`:
  *
  * - An `updateListener` runs the pure `detectSlash` on every doc/selection
- *   change. When it fires, `view.coordsAtPos(cursor)` gives the caret's
- *   viewport coordinates and the menu opens there; otherwise it closes. In the
+ *   change. When it matches AND the change was typing (`docChanged`),
+ *   `view.coordsAtPos(cursor)` gives the caret's viewport coordinates and the
+ *   menu opens/updates there; a selection-only match (e.g. clicking the caret
+ *   behind `/etc`) leaves the menu as-is rather than opening it. When
+ *   `detectSlash` returns null the menu closes. In the
  *   same pass, when there is a non-empty selection and no slash menu, it takes
  *   `coordsAtPos(selection.from)` and opens the selection bubble above that
  *   point; an empty selection (or an open slash menu) hides it. Both close when
@@ -116,21 +119,34 @@ export function useEditorBubbles(viewRef: RefObject<EditorView | null>): EditorB
       // stays hidden.
       const detected = detectSlash(update.state);
       if (detected) {
-        const cursor = update.state.selection.main.head;
-        const rect = update.view.coordsAtPos(cursor);
-        if (rect) {
-          setSlash({
-            query: detected.query,
-            from: detected.from,
-            coords: { left: rect.left, top: rect.top, bottom: rect.bottom },
-          });
-          setActiveIndex(0);
-          setSelection(null);
+        // OPEN/update the menu only in response to typing (docChanged). A
+        // selection-only change that happens to land after a `/word` — e.g.
+        // clicking the caret behind "/etc" — must NOT open it fresh.
+        if (update.docChanged) {
+          const cursor = update.state.selection.main.head;
+          const rect = update.view.coordsAtPos(cursor);
+          if (rect) {
+            setSlash({
+              query: detected.query,
+              from: detected.from,
+              coords: { left: rect.left, top: rect.top, bottom: rect.bottom },
+            });
+            setActiveIndex(0);
+            setSelection(null);
+            return;
+          }
+        } else if (stateRef.current.slash) {
+          // Selection-only change while the menu is already open (arrow key /
+          // click within the query): leave the current slash state as-is. The
+          // selection bubble stays hidden while slash is showing.
           return;
         }
+        // Otherwise (selection-only with the menu closed, or docChanged with no
+        // caret rect) fall through: the slash menu stays closed and we consider
+        // the selection bubble instead.
       }
-      // No slash menu here — make sure it is closed, then consider the selection
-      // bubble.
+      // No live slash menu here — make sure it is closed, then consider the
+      // selection bubble.
       closeMenu();
 
       const range = update.state.selection.main;
