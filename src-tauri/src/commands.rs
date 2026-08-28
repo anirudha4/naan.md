@@ -1,7 +1,8 @@
 use crate::dto::{NewNoteInput, NoteDto, NoteMetaDto, NotePatchInput, SearchInput};
 use crate::service::NotesService;
 use crate::state::AppState;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::DialogExt;
 
 fn service(state: &AppState) -> Result<NotesService, String> {
     state
@@ -64,4 +65,27 @@ pub fn search_notes(
     query: SearchInput,
 ) -> Result<Vec<NoteMetaDto>, String> {
     service(&state)?.search(query).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn pick_notes_dir(app: AppHandle) -> Option<String> {
+    app.dialog()
+        .file()
+        .blocking_pick_folder()
+        .map(|p| p.to_string())
+}
+
+#[tauri::command]
+pub fn set_notes_dir(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    dir: String,
+) -> Result<(), String> {
+    let path = std::path::PathBuf::from(&dir);
+    std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+    crate::config::save_dir(&state.config_path, &path).map_err(|e| e.to_string())?;
+    state.set_dir(path);
+    // Task 7 will also re-point the file watcher here.
+    let _ = app; // used by Task 7
+    Ok(())
 }

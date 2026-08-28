@@ -12,6 +12,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // config lives in the OS app-config dir
             let config_dir: PathBuf = app.path().app_config_dir()?;
@@ -33,6 +34,8 @@ pub fn run() {
             commands::update_note,
             commands::delete_note,
             commands::search_notes,
+            commands::pick_notes_dir,
+            commands::set_notes_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

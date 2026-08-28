@@ -12,10 +12,6 @@ pub fn load_dir(config_path: &Path) -> Option<PathBuf> {
     Some(PathBuf::from(cfg.notes_dir))
 }
 
-// `save_dir` isn't called outside tests yet — the save command lands in
-// Task 6. Until then rustc's dead-code check can't see a live caller, hence
-// the allow.
-#[allow(dead_code)]
 pub fn save_dir(config_path: &Path, dir: &Path) -> std::io::Result<()> {
     if let Some(parent) = config_path.parent() {
         std::fs::create_dir_all(parent)?;
