@@ -1,6 +1,243 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 @import "tailwindcss";
 
-/* Minimal tokens; the user's polish pass refines these. */
-:root { color-scheme: light dark; }
-html, body, #root { height: 100%; margin: 0; }
-body { font-family: system-ui, sans-serif; }
+/* ============================================================
+   naan — editorial design language
+   Warm paper, ink, hairline rules, ONE honey accent.
+   Geist for everything; Geist Mono for the "editorial data"
+   layer — labels, counts, tags, timestamps. Auto light/dark.
+   Motion tokens follow Emil Kowalski's curves.
+   ============================================================ */
+
+:root {
+  --paper:      #fbf8f3; /* app background — warm off-white */
+  --surface:    #f4eee5; /* sidebar / recessed */
+  --raised:     #ffffff; /* menus, dialogs */
+  --ink:        #211d19; /* primary text — warm near-black */
+  --ink-muted:  #857c72; /* secondary text */
+  --ink-faint:  #b3aa9c; /* labels, placeholders, disabled */
+  --line:       #e7dfd2; /* hairlines */
+  --line-strong:#d8cdbb; /* emphasized rule */
+  --gold:       #b5791a; /* THE accent — spot color, used sparingly */
+  --gold-soft:  #ecd6a4; /* accent tint (rings, selection) */
+  --gold-tint:  #f6ecd6; /* accent wash (active row) */
+
+  /* Emil's motion curves + a duration scale */
+  --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 140ms;
+  --dur-fast:  180ms;
+  --dur-menu:  220ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:      #17140f;
+    --surface:    #1e1a14;
+    --raised:     #221d16;
+    --ink:        #ece4d6;
+    --ink-muted:  #9a9082;
+    --ink-faint:  #665e51;
+    --line:       #2e2820;
+    --line-strong:#3d3529;
+    --gold:       #e0a63f;
+    --gold-soft:  #6f571f;
+    --gold-tint:  #241d12;
+  }
+}
+
+/* Map runtime vars into Tailwind so utilities (bg-paper, text-ink,
+   font-mono, ease-out, rounded-md) exist and follow light/dark. */
+@theme inline {
+  --color-paper:       var(--paper);
+  --color-surface:     var(--surface);
+  --color-raised:      var(--raised);
+  --color-ink:         var(--ink);
+  --color-ink-muted:   var(--ink-muted);
+  --color-ink-faint:   var(--ink-faint);
+  --color-line:        var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-gold:        var(--gold);
+  --color-gold-soft:   var(--gold-soft);
+  --color-gold-tint:   var(--gold-tint);
+
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* editorial-crisp corners */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 9px;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden; /* the app owns its scroll regions */
+}
+
+/* Signature: a whisper of warm paper grain over the whole app. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#root { position: relative; z-index: 1; isolation: isolate; }
+
+/* An editorial utility: small, tracked, uppercase mono micro-label. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+::selection { background: var(--gold-soft); color: var(--ink); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+
+@keyframes naan-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes naan-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- The writing surface (Tiptap WYSIWYG content) ---- */
+.naan-editor { height: 100%; }
+.naan-prose {
+  outline: none;
+  caret-color: var(--gold);
+  padding: 22px 0 40vh 0;
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.naan-prose ::selection { background: var(--gold-soft); }
+.naan-prose > * + * { margin-top: 0.7em; }
+
+.naan-prose h1 { font-size: 1.7em; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; margin-top: 1.3em; }
+.naan-prose h2 { font-size: 1.4em; font-weight: 600; line-height: 1.25; letter-spacing: -0.015em; margin-top: 1.2em; }
+.naan-prose h3 { font-size: 1.18em; font-weight: 600; line-height: 1.3; margin-top: 1em; }
+.naan-prose h1:first-child, .naan-prose h2:first-child, .naan-prose h3:first-child { margin-top: 0; }
+
+.naan-prose strong { font-weight: 700; }
+.naan-prose em { font-style: italic; }
+.naan-prose s { text-decoration: line-through; color: var(--ink-muted); }
+.naan-prose a { color: var(--gold); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+.naan-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--gold-tint);
+  padding: 0.1em 0.36em;
+  border-radius: 4px;
+}
+.naan-prose pre {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  line-height: 1.6;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.85em 1em;
+  overflow-x: auto;
+}
+.naan-prose pre code { background: none; padding: 0; font-size: inherit; }
+
+.naan-prose blockquote {
+  border-left: 2px solid var(--gold);
+  padding-left: 1em;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.naan-prose ul, .naan-prose ol { padding-left: 1.35em; }
+.naan-prose ul { list-style: disc; }
+.naan-prose ol { list-style: decimal; }
+.naan-prose li::marker { color: var(--gold); }
+.naan-prose li > p { margin: 0; }
+
+.naan-prose hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 1.6em 0;
+}
+
+/* Task list — real, clickable checkboxes. */
+.naan-prose ul[data-type="taskList"] { list-style: none; padding-left: 0.15em; }
+.naan-prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.6em; }
+.naan-prose ul[data-type="taskList"] li > label { margin-top: 0.3em; flex-shrink: 0; user-select: none; }
+.naan-prose ul[data-type="taskList"] li > div { flex: 1; min-width: 0; }
+.naan-prose ul[data-type="taskList"] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.05em;
+  height: 1.05em;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--paper);
+  cursor: pointer;
+  position: relative;
+  transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+.naan-prose ul[data-type="taskList"] input[type="checkbox"]:hover { border-color: var(--gold); }
+.naan-prose ul[data-type="taskList"] input[type="checkbox"]:checked { background: var(--gold); border-color: var(--gold); }
+.naan-prose ul[data-type="taskList"] input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 0.33em;
+  top: 0.13em;
+  width: 0.26em;
+  height: 0.5em;
+  border: solid var(--paper);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.naan-prose ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+/* Placeholder (empty editor / empty first line). */
+.naan-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--ink-faint);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

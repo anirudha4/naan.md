@@ -34,19 +34,29 @@ export function Dialog({
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-black/40" />
+        <BaseDialog.Backdrop
+          className={cn(
+            "fixed inset-0 z-40 bg-ink/35 backdrop-blur-[1.5px]",
+            "transition-opacity duration-200 ease-[var(--ease-out)]",
+            "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+          )}
+        />
         <BaseDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <BaseDialog.Popup
             className={cn(
-              "w-full max-w-sm rounded-lg bg-white p-5 shadow-xl outline-none",
-              "dark:bg-gray-900",
+              "w-full max-w-sm rounded-xl border border-line bg-raised p-5 text-ink outline-none",
+              "shadow-[0_28px_80px_-24px_rgba(20,14,6,0.55)]",
+              "transition-[opacity,transform] duration-200 ease-[var(--ease-out)]",
+              "data-[starting-style]:scale-[0.96] data-[starting-style]:opacity-0",
+              "data-[ending-style]:scale-[0.96] data-[ending-style]:opacity-0",
             )}
           >
-            <BaseDialog.Title className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            <p className="eyebrow mb-2">{danger ? "Confirm" : "Dialog"}</p>
+            <BaseDialog.Title className="text-[15px] font-semibold tracking-tight text-ink">
               {title}
             </BaseDialog.Title>
             {children && (
-              <BaseDialog.Description className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <BaseDialog.Description className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
                 {children}
               </BaseDialog.Description>
             )}
