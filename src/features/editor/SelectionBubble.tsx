@@ -1,79 +1,72 @@
-import { createPortal } from "react-dom";
-import { motion } from "motion/react";
-import type { EditorView } from "@codemirror/view";
+import type { ReactNode } from "react";
+import type { Editor } from "@tiptap/core";
 import { cn } from "../../lib/cn";
-import { selectionCommands } from "./commands";
-import type { SelectionBubbleState } from "./useEditorBubbles";
 
-export interface SelectionBubbleProps {
-  /** Bubble state (viewport coordinates of the selection start). */
-  state: SelectionBubbleState;
-  /** The live editor view each command runs against. */
-  view: EditorView | null;
+interface ToolbarItem {
+  id: string;
+  title: string;
+  glyph: ReactNode;
+  isActive: (e: Editor) => boolean;
+  run: (e: Editor) => void;
 }
 
+const linkGlyph = (
+  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+    <path d="M10 13a4 4 0 0 0 5.66 0l2.5-2.5a4 4 0 1 0-5.66-5.66l-1 1" />
+    <path d="M14 11a4 4 0 0 0-5.66 0l-2.5 2.5a4 4 0 1 0 5.66 5.66l1-1" />
+  </svg>
+);
+
+function toggleLink(editor: Editor) {
+  if (editor.isActive("link")) {
+    editor.chain().focus().unsetLink().run();
+    return;
+  }
+  const url = window.prompt("Link URL");
+  if (url) editor.chain().focus().setLink({ href: url }).run();
+}
+
+const items: ToolbarItem[] = [
+  { id: "bold", title: "Bold", glyph: <span className="font-bold">B</span>, isActive: (e) => e.isActive("bold"), run: (e) => e.chain().focus().toggleBold().run() },
+  { id: "italic", title: "Italic", glyph: <span className="italic">I</span>, isActive: (e) => e.isActive("italic"), run: (e) => e.chain().focus().toggleItalic().run() },
+  { id: "strike", title: "Strikethrough", glyph: <span className="line-through">S</span>, isActive: (e) => e.isActive("strike"), run: (e) => e.chain().focus().toggleStrike().run() },
+  { id: "code", title: "Code", glyph: <span className="font-mono text-[12px]">{"</>"}</span>, isActive: (e) => e.isActive("code"), run: (e) => e.chain().focus().toggleCode().run() },
+  { id: "link", title: "Link", glyph: linkGlyph, isActive: (e) => e.isActive("link"), run: toggleLink },
+];
+
 /**
- * The selection formatting bubble: a small toolbar floating just above a
- * non-empty selection, with the inline `selectionCommands` (bold/italic/
- * strike/code/link). Each button wraps the selection in the matching Markdown
- * via `wrapSelection`, which preserves the selection — so the bubble stays put
- * across the action and repositions from the next `updateListener` pass.
- *
- * Rendered through a portal to `document.body` and positioned `fixed` at the
- * selection's viewport coordinates (`coordsAtPos` is viewport-relative — no
- * scroll math). The outer div does the placement (lifted a full bubble-height
- * plus a gap ABOVE the anchor); the inner `motion.div` owns the entrance
- * animation, so their transforms never fight.
- *
- * `onMouseDown` is prevented so clicking a button does not blur the editor and
- * collapse the selection before the click handler runs. Dismissal is handled by
- * the hook: an empty selection clears the state, and Escape (caught by the
- * editor keymap, since focus never leaves it) hides the bubble too.
+ * Contents of the selection BubbleMenu — an editorial glyph toolbar. Tiptap's
+ * BubbleMenu handles positioning + show-on-selection; this just renders the
+ * inline-format controls and reflects their active state.
  */
-export function SelectionBubble({ state, view }: SelectionBubbleProps) {
-  return createPortal(
+export function SelectionToolbar({ editor }: { editor: Editor }) {
+  return (
     <div
-      style={{
-        position: "fixed",
-        left: state.coords.left,
-        top: state.coords.top,
-        transform: "translateY(calc(-100% - 8px))",
-      }}
+      className={cn(
+        "flex items-center gap-0.5 rounded-lg border border-line bg-raised p-1 text-ink",
+        "shadow-[0_12px_44px_-14px_rgba(30,20,8,0.45)]",
+        "animate-[naan-fade_140ms_var(--ease-out)_both]",
+      )}
     >
-      <motion.div
-        role="toolbar"
-        aria-label="Format selection"
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.12, ease: "easeOut" }}
-        onMouseDown={(e) => e.preventDefault()}
-        className={cn(
-          "z-50 flex items-center gap-0.5 rounded-md border p-1 shadow-lg",
-          "border-gray-200 bg-white text-gray-900",
-          "dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100",
-        )}
-      >
-        {selectionCommands.map((command) => (
+      {items.map((item) => {
+        const active = item.isActive(editor);
+        return (
           <button
-            key={command.id}
+            key={item.id}
             type="button"
-            onClick={() => {
-              if (!view) return;
-              command.run(view);
-              // Focus never left the editor (mousedown was prevented); this just
-              // guards against any edge case that could steal it.
-              view.focus();
-            }}
+            aria-label={item.title}
+            title={item.title}
+            onClick={() => item.run(editor)}
             className={cn(
-              "rounded px-2 py-1 text-sm",
-              "hover:bg-gray-100 dark:hover:bg-gray-700",
+              "flex h-7 w-7 items-center justify-center rounded-md text-[13px]",
+              "transition-[transform,background-color,color] duration-120 ease-[var(--ease-out)] active:scale-90",
+              active ? "bg-gold-tint text-gold" : "text-ink-muted hover:bg-ink/[0.06] hover:text-ink",
             )}
           >
-            {command.title}
+            {item.glyph}
           </button>
-        ))}
-      </motion.div>
-    </div>,
-    document.body,
+        );
+      })}
+    </div>
   );
 }

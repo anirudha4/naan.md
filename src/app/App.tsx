@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "../components/Button";
 import { Dialog } from "../components/Dialog";
 import { EditorPane } from "../features/notes/EditorPane";
@@ -184,28 +184,34 @@ export default function App() {
 
   if (!dir) {
     return (
-      <main className="flex h-screen flex-col items-start gap-3 p-12">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">naan</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Choose a folder to keep your notes in.
-        </p>
-        {error && (
-          <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
-            {error}
+      <main className="flex h-screen items-center justify-center bg-paper px-8">
+        <div className="w-full max-w-sm animate-[naan-rise_600ms_var(--ease-out)_both]">
+          <p className="eyebrow mb-3">Local-first notes</p>
+          <h1 className="font-sans text-6xl font-semibold leading-none tracking-tight text-ink">
+            naan<span className="text-gold">.</span>
+          </h1>
+          <div className="mt-6 h-px w-full bg-line" />
+          <p className="mt-6 text-[15px] leading-relaxed text-ink-muted">
+            A quiet place for your words. Every note is a plain Markdown file in a
+            folder you choose — yours to keep, sync, and read anywhere.
+          </p>
+          {error && <ErrorNote>{error}</ErrorNote>}
+          <div className="mt-8 flex items-center gap-2.5">
+            <Button onClick={handleChooseFolder}>Choose folder</Button>
+            <Button variant="ghost" onClick={handleUseDefaultFolder}>
+              Use ~/Documents/naan
+            </Button>
           </div>
-        )}
-        <div className="flex gap-2">
-          <Button onClick={handleChooseFolder}>Choose folder</Button>
-          <Button variant="ghost" onClick={handleUseDefaultFolder}>
-            Use ~/Documents/naan
-          </Button>
+          <p className="eyebrow mt-12 text-ink-faint/80">
+            Markdown · YAML frontmatter · yours forever
+          </p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex h-screen">
+    <main className="flex h-screen bg-paper text-ink">
       <Sidebar
         notes={notes}
         selectedId={selectedId}
@@ -219,8 +225,8 @@ export default function App() {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         {error && (
-          <div className="mx-4 mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
-            {error}
+          <div className="px-8 pt-4">
+            <ErrorNote>{error}</ErrorNote>
           </div>
         )}
         <EditorPane
@@ -256,5 +262,18 @@ export default function App() {
         {deleteTarget ? `Delete "${deleteTarget.title || "Untitled"}"? This can't be undone.` : ""}
       </Dialog>
     </main>
+  );
+}
+
+/** Editorial error note: a hairline rule, a mono label, the message. */
+function ErrorNote({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="alert"
+      className="flex items-start gap-2.5 border-l-2 border-red-500/60 bg-red-500/[0.05] py-2 pl-3 pr-3 text-[13px] leading-snug"
+    >
+      <span className="eyebrow mt-px shrink-0 text-red-600! dark:text-red-400!">Error</span>
+      <span className="text-ink-muted">{children}</span>
+    </div>
   );
 }

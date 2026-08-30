@@ -10,12 +10,10 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 }
 
 const variantClasses: Record<IconButtonVariant, string> = {
-  default:
-    "bg-gray-900 text-white hover:bg-gray-700 disabled:bg-gray-300 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300",
-  ghost:
-    "bg-transparent text-gray-700 hover:bg-gray-100 disabled:text-gray-400 dark:text-gray-300 dark:hover:bg-gray-800",
+  default: "bg-ink text-paper hover:bg-ink/90",
+  ghost: "bg-transparent text-ink-faint hover:bg-ink/[0.06] hover:text-ink",
   danger:
-    "bg-transparent text-red-600 hover:bg-red-50 disabled:text-red-300 dark:hover:bg-red-950",
+    "bg-transparent text-ink-faint hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400",
 };
 
 const sizeClasses: Record<IconButtonSize, string> = {
@@ -24,9 +22,8 @@ const sizeClasses: Record<IconButtonSize, string> = {
 };
 
 /**
- * Square, icon-only button. Native `<button>`, same pattern as `Button`.
- * Icon-only buttons are only accessible if the caller passes `aria-label`
- * (there's no visible text label to fall back on).
+ * Square, icon-only button. Accessible only if the caller passes `aria-label`.
+ * Press feedback + gold focus ring follow the app's motion language.
  */
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ className, variant = "ghost", size = "md", type = "button", ...props }, ref) => {
@@ -35,9 +32,10 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type={type}
         className={cn(
-          "inline-flex items-center justify-center rounded-md transition-colors",
-          "outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1",
-          "disabled:cursor-not-allowed disabled:opacity-60",
+          "inline-flex items-center justify-center rounded-md",
+          "transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.94]",
+          "outline-none focus-visible:ring-2 focus-visible:ring-gold/50",
+          "disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
           variantClasses[variant],
           sizeClasses[size],
           className,

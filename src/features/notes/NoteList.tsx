@@ -8,17 +8,23 @@ export interface NoteListProps {
   onDelete: (id: string) => void;
 }
 
-/**
- * Renders `notes` as a list of `NoteListItem`s, highlighting `selectedId`.
- * Shows an empty-state message when there are no notes.
- */
+/** Renders `notes` as rows, highlighting `selectedId`; editorial empty state. */
 export function NoteList({ notes, selectedId, onOpen, onDelete }: NoteListProps) {
   if (notes.length === 0) {
-    return <p className="px-2 py-4 text-sm text-gray-500 dark:text-gray-400">No notes yet.</p>;
+    return (
+      <div className="px-4 py-10">
+        <p className="eyebrow mb-1.5">Empty</p>
+        <p className="text-[13px] leading-relaxed text-ink-muted">
+          No notes yet.
+          <br />
+          Press + to write your first.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+    <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-3">
       {notes.map((note) => (
         <NoteListItem
           key={note.id}
